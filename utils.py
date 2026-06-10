@@ -1,3 +1,4 @@
+# OCR utility functions for scam detection
 import re
 from io import BytesIO
 
