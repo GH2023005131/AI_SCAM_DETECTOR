@@ -1,3 +1,4 @@
+# Prompt templates for Gemini
 def build_prompt(text: str) -> str:
     return (
         "Analyze the following text for scam risk and return only valid JSON with these keys: "
