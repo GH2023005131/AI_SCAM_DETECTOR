@@ -1,6 +1,7 @@
 streamlit
+google-generativeai
 python-dotenv
 pillow
-numpy
-google-genai
 easyocr
+opencv-python
+pandas

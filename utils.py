@@ -1,35 +1,18 @@
-
-import re
 from io import BytesIO
-
-try:
-    import easyocr
-    from PIL import Image
-    import numpy as np
-except ImportError:
-    easyocr = None
-
-OCR_AVAILABLE = easyocr is not None
-
-
-def is_ocr_available() -> bool:
-    return OCR_AVAILABLE
-
+from PIL import Image
 
 def extract_text_from_image(image_bytes: bytes) -> str:
-    if easyocr is None:
-        return ""
-
     try:
-        image = Image.open(BytesIO(image_bytes)).convert("RGB")
-        reader = easyocr.Reader(["en"], gpu=False)
-        raw_result = reader.readtext(np.array(image), detail=0)
-        return "\n".join(raw_result).strip()
+        import easyocr
+        import numpy as np
     except Exception:
-        return ""
-
+        return "OCR unavailable (easyocr not installed). Install with: pip install easyocr numpy"
+    reader = easyocr.Reader(['en'])
+    img = Image.open(BytesIO(image_bytes)).convert('RGB')
+    arr = np.array(img)
+    results = reader.readtext(arr)
+    texts = [r[1] for r in results]
+    return "\n".join(texts)
 
 def clean_text(text: str) -> str:
-    normalized = text.replace("\r", " ").replace("\n", " ")
-    normalized = re.sub(r"\s+", " ", normalized)
-    return normalized.strip()
+    return " ".join(text.split())

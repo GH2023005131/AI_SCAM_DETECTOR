@@ -1,0 +1,6 @@
+streamlit
+python-dotenv
+pillow
+pandas
+google-generativeai
+# Excludes heavy local OCR deps: easyocr, torch, opencv-python

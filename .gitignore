@@ -1,12 +1,19 @@
-.venv/
-venv/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*.so
+
+# Virtual environments
+venv/
+.venv/
+
+# Env files
 .env
+
+# IDE/editor
+.vscode/
+*.swp
+
+# OS
 .DS_Store
 Thumbs.db
-uploads/
-reports/
-assets/

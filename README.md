@@ -1,38 +1,33 @@
-# AI Scam Detector
+# AI-Scam-Detector
 
-A Streamlit app that detects scam risk from uploaded screenshots or pasted text. The app uses OCR for images and can optionally call Gemini if a `GEMINI_API_KEY` is configured.
+Minimal MVP for detecting scams from pasted text or uploaded screenshots (OCR + AI analysis).
 
-## Run locally
-
-1. Create a virtual environment and install dependencies:
+Quick start (Windows):
 
 ```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements-lite.txt
-```
-
-2. Start the app:
-
-```powershell
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Environment
+Set your Gemini API key in `.env` as `GEMINI_API_KEY=` if integrating later.
 
-Create a `.env` file with the optional Gemini API key:
+Deployment notes
+---------------
 
-```text
-GEMINI_API_KEY=your_api_key_here
+- The default `requirements.txt` includes OCR packages (`easyocr`, `torch`, `opencv-python`) which are large and may fail or be slow on hosted services. For lightweight deployment (Streamlit Cloud, Heroku free tier) use `requirements-lite.txt` which excludes heavy OCR packages.
+- Options:
+	- Use `requirements-lite.txt` and delegate OCR to a cloud provider (Google Vision API, AWS Textract) to avoid installing `torch`.
+	- If you need on-host OCR, keep `easyocr` in `requirements.txt` but expect longer build times and larger slug sizes.
+- Before deploying, set `GEMINI_API_KEY` as an environment variable in your host's dashboard (do not commit `.env`).
+
+Quick deploy (lightweight):
+
+```powershell
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements-lite.txt
+streamlit run app.py
 ```
 
-If no key is set, the app will use a simple fallback analysis.
-
-## Files
-
-- `app.py` - Streamlit frontend and UI logic
-- `utils.py` - OCR extraction and text cleanup
-- `scam_detector.py` - risk analysis and Gemini fallback
-- `prompt.py` - prompt builder for Gemini
-- `requirements-lite.txt` - lightweight dependency list
-- `test_analyze.py` - basic validation test

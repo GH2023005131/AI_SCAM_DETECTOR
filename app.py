@@ -1,290 +1,559 @@
 import os
 from dotenv import load_dotenv
 import streamlit as st
-from utils import extract_text_from_image, clean_text, is_ocr_available
+from utils import extract_text_from_image, clean_text
 from scam_detector import analyze_text
 
 load_dotenv()
 
+# =========================
+# LANGUAGE SUPPORT
+# =========================
+
+LANG = {
+    "English": {
+        "page_title": "AI Scam Detector Pro",
+        "title": "🛡️ AI Scam Detector",
+        "subtitle": "Detect phishing, fraud, impersonation and malicious messages using AI-powered analysis.",
+        "language": "🌐 Language",
+        "upload": "Upload Screenshot / Text File",
+        "paste": "Paste suspicious content",
+        "analyze": "Analyze Message",
+        "result": "Analysis Result",
+        "risk": "Risk Score",
+        "threat": "Threat Level",
+        "type": "Scam Type",
+        "why": "Why It Looks Suspicious",
+        "next": "Recommended Actions",
+        "pipeline_title": "Detection Pipeline",
+        "pipeline_steps": [
+            "Upload screenshot or text",
+            "OCR extracts content",
+            "Gemini AI analyzes risk",
+            "Security recommendations generated",
+        ],
+        "tips_title": "Safety Tips",
+        "tips": [
+            "Never share OTPs",
+            "Verify sender identity",
+            "Avoid unknown links",
+            "Do not download suspicious files",
+        ],
+        "ocr_spinner": "Running OCR...",
+        "analysis_spinner": "Analyzing with AI...",
+        "empty_error": "Please provide text or an image.",
+        "high_risk": "HIGH RISK DETECTED",
+        "medium_risk": "MEDIUM RISK DETECTED",
+        "low_risk": "LOW RISK DETECTED",
+        "extracted": "Extracted Content",
+        "threat_levels": {
+            "Low": "Low",
+            "Medium": "Medium",
+            "High": "High",
+            "Unknown": "Unknown",
+        },
+        "scam_types": {
+            "Phishing": "Phishing",
+            "Unknown": "Unknown",
+        },
+        "fallback_reason": "No obvious indicators found.",
+        "parse_error": "Model returned unparsable response."
+    },
+
+    "తెలుగు": {
+        "page_title": "AI మోసాల గుర్తింపు ప్రో",
+        "title": "🛡️ AI మోసాల గుర్తింపు వ్యవస్థ",
+        "subtitle": "AI ఆధారిత విశ్లేషణతో మోసపూరిత సందేశాలను గుర్తించండి.",
+        "language": "🌐 భాష",
+        "upload": "స్క్రీన్‌షాట్ లేదా ఫైల్ అప్లోడ్ చేయండి",
+        "paste": "సందేశాన్ని పేస్ట్ చేయండి",
+        "analyze": "విశ్లేషించండి",
+        "result": "విశ్లేషణ ఫలితం",
+        "risk": "ప్రమాద స్కోర్",
+        "threat": "ప్రమాద స్థాయి",
+        "type": "మోసం రకం",
+        "why": "ఎందుకు అనుమానాస్పదంగా ఉంది",
+        "next": "తదుపరి చర్యలు",
+        "pipeline_title": "గుర్తింపు ప్రక్రియ",
+        "pipeline_steps": [
+            "స్క్రీన్‌షాట్ లేదా టెక్స్ట్ అప్లోడ్ చేయండి",
+            "OCR కంటెంట్‌ను వెలికితీస్తుంది",
+            "Gemini AI ప్రమాదాన్ని విశ్లేషిస్తుంది",
+            "భద్రతా సూచనలు రూపొందించబడతాయి",
+        ],
+        "tips_title": "భద్రతా చిట్కాలు",
+        "tips": [
+            "OTPలను ఎప్పుడూ పంచుకోవద్దు",
+            "పంపిన వ్యక్తి గుర్తింపును ధృవీకరించండి",
+            "తెలియని లింకులను నివారించండి",
+            "అనుమానాస్పద ఫైళ్లను డౌన్‌లోడ్ చేయవద్దు",
+        ],
+        "ocr_spinner": "OCR నడుస్తోంది...",
+        "analysis_spinner": "AIతో విశ్లేషిస్తోంది...",
+        "empty_error": "దయచేసి టెక్స్ట్ లేదా చిత్రాన్ని అందించండి.",
+        "high_risk": "అధిక ప్రమాదం గుర్తించబడింది",
+        "medium_risk": "మధ్యస్థ ప్రమాదం గుర్తించబడింది",
+        "low_risk": "తక్కువ ప్రమాదం గుర్తించబడింది",
+        "extracted": "వెలికితీసిన కంటెంట్",
+        "threat_levels": {
+            "Low": "తక్కువ",
+            "Medium": "మధ్యస్థం",
+            "High": "అధికం",
+            "Unknown": "తెలియదు",
+        },
+        "scam_types": {
+            "Phishing": "ఫిషింగ్",
+            "Unknown": "తెలియదు",
+        },
+        "fallback_reason": "స్పష్టమైన సూచనలు కనబడలేదు.",
+        "parse_error": "మోడల్ అర్థం చేసుకోలేని ప్రతిస్పందనను ఇచ్చింది."
+    },
+
+    "हिन्दी": {
+        "page_title": "AI स्कैम डिटेक्टर प्रो",
+        "title": "🛡️ AI स्कैम डिटेक्टर",
+        "subtitle": "AI आधारित विश्लेषण द्वारा संदिग्ध संदेशों की पहचान करें।",
+        "language": "🌐 भाषा",
+        "upload": "स्क्रीनशॉट या फ़ाइल अपलोड करें",
+        "paste": "संदेश पेस्ट करें",
+        "analyze": "विश्लेषण करें",
+        "result": "विश्लेषण परिणाम",
+        "risk": "जोखिम स्कोर",
+        "threat": "खतरे का स्तर",
+        "type": "स्कैम प्रकार",
+        "why": "यह संदिग्ध क्यों है",
+        "next": "अगले कदम",
+        "pipeline_title": "पहचान प्रक्रिया",
+        "pipeline_steps": [
+            "स्क्रीनशॉट या टेक्स्ट अपलोड करें",
+            "OCR सामग्री निकालता है",
+            "Gemini AI जोखिम का विश्लेषण करता है",
+            "सुरक्षा सुझाव तैयार होते हैं",
+        ],
+        "tips_title": "सुरक्षा सुझाव",
+        "tips": [
+            "OTP कभी साझा न करें",
+            "भेजने वाले की पहचान सत्यापित करें",
+            "अनजान लिंक से बचें",
+            "संदिग्ध फ़ाइलें डाउनलोड न करें",
+        ],
+        "ocr_spinner": "OCR चल रहा है...",
+        "analysis_spinner": "AI से विश्लेषण हो रहा है...",
+        "empty_error": "कृपया टेक्स्ट या छवि दें।",
+        "high_risk": "उच्च जोखिम मिला",
+        "medium_risk": "मध्यम जोखिम मिला",
+        "low_risk": "कम जोखिम मिला",
+        "extracted": "निकाली गई सामग्री",
+        "threat_levels": {
+            "Low": "कम",
+            "Medium": "मध्यम",
+            "High": "उच्च",
+            "Unknown": "अज्ञात",
+        },
+        "scam_types": {
+            "Phishing": "फ़िशिंग",
+            "Unknown": "अज्ञात",
+        },
+        "fallback_reason": "कोई स्पष्ट संकेत नहीं मिला।",
+        "parse_error": "मॉडल ने पढ़ने योग्य प्रतिक्रिया नहीं दी।"
+    }
+}
+
+language_options = ["English", "తెలుగు", "हिन्दी"]
+current_lang = st.session_state.get("selected_lang", "English")
+current_lang = current_lang if current_lang in language_options else "English"
+
 st.set_page_config(
-    page_title="AI Scam Detector",
+    page_title=LANG[current_lang]["page_title"],
     page_icon="🛡️",
     layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-st.markdown(
-    """
-    <style>
-        .stApp {
-            background: linear-gradient(135deg, #0b1220 0%, #102a54 45%, #1d4ed8 100%);
-        }
-        .block-container {
-            background: rgba(15, 23, 42, 0.94);
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            border-radius: 24px;
-            padding: 2rem 2rem 2rem;
-            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.32);
-            color: #e2e8f0;
-        }
-        .app-title {
-            font-size: 3.4rem;
-            font-weight: 800;
-            color: #f8fafc;
-            margin-bottom: 0.2rem;
-        }
-        .app-subtitle {
-            font-size: 1.05rem;
-            color: #cbd5e1;
-            margin-top: 0;
-            margin-bottom: 1.5rem;
-        }
-        .stButton>button {
-            background-color: #2563eb;
-            color: #ffffff;
-            border: none;
-            border-radius: 10px;
-            padding: 0.85rem 1.3rem;
-            font-weight: 700;
-            box-shadow: 0 12px 30px rgba(37, 99, 235, 0.24);
-        }
-        .stButton>button:hover {
-            background-color: #1d4ed8;
-            color: #ffffff;
-        }
-        .stTextArea textarea,
-        .stTextInput>div>input,
-        .stFileUploader {
-            background: #0f172a !important;
-            color: #f8fafc !important;
-            border: 1px solid rgba(148, 163, 184, 0.35) !important;
-            border-radius: 14px !important;
-        }
-        .stTextArea textarea::placeholder,
-        .stTextInput>div>input::placeholder {
-            color: #94a3b8 !important;
-        }
-        .component-card {
-            background: rgba(30, 58, 138, 0.98);
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            border-radius: 20px;
-            padding: 1.4rem;
-            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
-            color: #eff6ff;
-        }
-        .component-card h3 {
-            margin-bottom: 0.75rem;
-            color: #ffffff;
-        }
-        .component-card ul {
-            margin: 0;
-            padding-left: 1.1rem;
-            color: #cbd5e1;
-        }
-        .component-card li {
-            color: #cbd5e1;
-        }
-        .result-block {
-            background: linear-gradient(180deg, #1f3a8a 0%, #2563eb 100%);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            border-radius: 22px;
-            padding: 1.6rem;
-            margin-top: 1.5rem;
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.24);
-            color: #f8fafc;
-        }
-        .result-heading {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 0.6rem;
-            color: #ffffff;
-        }
-        .status-msg {
-            color: #dbeafe;
-            margin-bottom: 1.2rem;
-        }
-        .metric-card {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 18px;
-            padding: 1rem 1.1rem;
-            text-align: center;
-            color: #eff6ff;
-            margin-bottom: 0.8rem;
-        }
-        .metric-title {
-            color: #c7d2fe;
-            font-size: 0.95rem;
-            margin-bottom: 0.55rem;
-        }
-        .metric-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-        .result-list-card {
-            background: rgba(30, 58, 138, 0.98);
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            border-radius: 22px;
-            padding: 1.4rem;
-            margin-top: 1rem;
-            color: #eff6ff;
-        }
-        .result-list-card h3 {
-            margin-top: 0;
-            margin-bottom: 0.8rem;
-            color: #ffffff;
-        }
-        .result-list-card ul {
-            margin: 0;
-            padding-left: 1.1rem;
-            color: #cbd5e1;
-        }
-        .result-list-card li {
-            color: #cbd5e1;
-            margin-bottom: 0.4rem;
-        }
-        .css-1kyxreq {
-            color: #f8fafc;
-        }
-        .stMarkdown p,
-        .stMarkdown h1,
-        .stMarkdown h2,
-        .stMarkdown h3 {
-            color: #f8fafc;
-        }
-        .css-1kyxreq {
-            color: #f8fafc;
-        }
-        .stMarkdown p,
-        .stMarkdown h1,
-        .stMarkdown h2,
-        .stMarkdown h3 {
-            color: #f8fafc;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
+selected_lang = st.sidebar.selectbox(
+    LANG[current_lang]["language"],
+    language_options,
+    index=language_options.index(current_lang),
+    key="selected_lang",
 )
 
-st.markdown("<div class='app-title'>AI Scam Detector</div>", unsafe_allow_html=True)
-st.markdown(
-    "<p class='app-subtitle'>Upload a screenshot or paste suspicious text to get an instant scam risk score, type, and safety guidance.</p>",
-    unsafe_allow_html=True,
-)
+T = LANG[selected_lang]
 
-with st.container():
-    left, right = st.columns([2, 1])
-    with left:
-        uploaded = st.file_uploader(
-            "Upload screenshot or text file",
-            type=["png", "jpg", "jpeg", "txt"],
-            help="Upload a scam screenshot or text file for analysis.",
-        )
-        text_input = st.text_area(
-            "Or paste text here",
-            height=220,
-            help="Paste the suspicious message content here.",
-        )
-        analyze_button = st.button("Analyze")
-    with right:
-        st.markdown(
-            "<div class='component-card'><h3>How it works</h3>"
-            "<ul style='margin: 0; padding-left: 1.1rem; color: #cbd5e1;'>"
-            "<li>Upload image or text content.</li>"
-            "<li>OCR extracts text from images.</li>"
-            "<li>AI evaluates risk, type, and mitigation.</li>"
-            "</ul></div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            "<div class='component-card'><h3>Security tips</h3>"
-            "<ul style='margin: 0; padding-left: 1.1rem; color: #cbd5e1;'>"
-            "<li>Do not click unknown links.</li>"
-            "<li>Never share OTP or passwords.</li>"
-            "<li>Verify sender identity independently.</li>"
-            "</ul></div>",
-            unsafe_allow_html=True,
-        )
+# =========================
+# CSS
+# =========================
 
-if analyze_button:
+st.markdown("""
+<style>
+:root{
+    --ink:#0f172a;
+    --muted:#475569;
+    --soft:#64748b;
+    --line:#dbe3ef;
+    --card:#ffffff;
+    --brand:#0f766e;
+    --brand-dark:#115e59;
+    --accent:#2563eb;
+}
+
+.stApp{
+    background:linear-gradient(180deg,#f8fafc 0%,#eef6f8 48%,#f8fafc 100%);
+    color:var(--ink);
+}
+
+.main .block-container{
+    padding-top:1.75rem;
+    padding-bottom:3rem;
+    max-width:1180px;
+}
+
+h1,h2,h3,h4,h5,h6,p,li,label,
+[data-testid="stMarkdownContainer"]{
+    color:var(--ink);
+}
+
+[data-testid="stSidebar"]{
+    background:#ffffff;
+    border-right:1px solid var(--line);
+}
+
+[data-testid="stSidebar"] *{
+    color:var(--ink) !important;
+}
+
+.hero-card{
+    background:linear-gradient(135deg,#0f172a 0%,#134e4a 58%,#0e7490 100%);
+    padding:34px 36px;
+    border-radius:26px;
+    border:1px solid rgba(255,255,255,0.14);
+    box-shadow:0 22px 55px rgba(15,23,42,.22);
+    margin-bottom:24px;
+}
+
+.hero-title{
+    color:#ffffff;
+    font-size:clamp(2.1rem,4vw,3.4rem);
+    font-weight:800;
+    letter-spacing:-0.045em;
+    line-height:1.05;
+    margin-bottom:12px;
+}
+
+.hero-subtitle{
+    color:#d9f3f0;
+    font-size:clamp(1rem,1.7vw,1.18rem);
+    line-height:1.65;
+    max-width:780px;
+}
+
+.glass{
+    background:var(--card);
+    padding:26px;
+    border-radius:22px;
+    border:1px solid var(--line);
+    box-shadow:0 16px 42px rgba(15,23,42,.08);
+}
+
+.glass h3{
+    margin:0 0 16px 0;
+    font-size:1.22rem;
+    line-height:1.3;
+    font-weight:750;
+    letter-spacing:-0.02em;
+    color:var(--ink);
+}
+
+.glass ul{
+    margin:0;
+    padding-left:1.15rem;
+}
+
+.glass li{
+    color:var(--muted);
+    line-height:1.65;
+}
+
+.feature-box{
+    background:#f8fafc;
+    padding:14px 16px;
+    border-radius:14px;
+    margin-bottom:12px;
+    border:1px solid #e2e8f0;
+    border-left:4px solid var(--brand);
+    color:var(--muted);
+    font-size:.98rem;
+    line-height:1.45;
+}
+
+.risk-high,
+.risk-medium,
+.risk-low{
+    padding:14px 16px;
+    border-radius:14px;
+    font-size:1rem;
+    font-weight:800;
+    letter-spacing:.01em;
+    border:1px solid transparent;
+    margin:14px 0 8px;
+}
+
+.risk-high{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#991b1b;
+}
+
+.risk-medium{
+    background:#fffbeb;
+    border-color:#fde68a;
+    color:#92400e;
+}
+
+.risk-low{
+    background:#ecfdf5;
+    border-color:#bbf7d0;
+    color:#166534;
+}
+
+.stTextArea label,
+.stFileUploader label{
+    color:var(--ink) !important;
+    font-size:1rem !important;
+    font-weight:700 !important;
+}
+
+.stTextArea textarea{
+    background:#ffffff !important;
+    color:var(--ink) !important;
+    border:1px solid #cbd5e1 !important;
+    border-radius:14px !important;
+    font-size:1rem !important;
+    line-height:1.55 !important;
+}
+
+.stFileUploader section{
+    background:#f8fafc !important;
+    border:1px dashed #94a3b8 !important;
+    border-radius:16px !important;
+}
+
+.stFileUploader *{
+    color:var(--ink) !important;
+}
+
+.stButton button{
+    width:100%;
+    min-height:54px;
+    font-size:1.02rem;
+    font-weight:800;
+    border-radius:14px;
+    background:linear-gradient(90deg,var(--brand-dark),var(--accent));
+    color:#ffffff !important;
+    border:none;
+    box-shadow:0 12px 28px rgba(37,99,235,.22);
+}
+
+.stButton button:hover{
+    filter:brightness(1.04);
+    box-shadow:0 14px 32px rgba(37,99,235,.28);
+}
+
+[data-testid="stMetric"]{
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:18px 20px;
+    box-shadow:0 12px 30px rgba(15,23,42,.07);
+}
+
+[data-testid="stMetricValue"]{
+    color:var(--ink) !important;
+    font-size:clamp(1.45rem,2.4vw,2.05rem) !important;
+    font-weight:850 !important;
+    letter-spacing:-0.035em;
+}
+
+[data-testid="stMetricLabel"]{
+    color:var(--soft) !important;
+    font-size:.9rem !important;
+    font-weight:700 !important;
+}
+
+[data-testid="stExpander"]{
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:16px;
+}
+
+.stAlert{
+    color:var(--ink) !important;
+}
+
+@media (max-width: 768px){
+    .main .block-container{
+        padding-left:1rem;
+        padding-right:1rem;
+    }
+
+    .hero-card,
+    .glass{
+        padding:22px;
+        border-radius:20px;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# HERO
+# =========================
+
+st.markdown(f"""
+<div class="hero-card">
+<div class="hero-title">{T['title']}</div>
+<div class="hero-subtitle">
+{T['subtitle']}
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+# =========================
+# MAIN UI
+# =========================
+
+left, right = st.columns([2.2,1])
+
+with left:
+
+    st.markdown('<div class="glass">', unsafe_allow_html=True)
+
+    uploaded = st.file_uploader(
+        f"📁 {T['upload']}",
+        type=["png","jpg","jpeg","txt"]
+    )
+
+    text_input = st.text_area(
+        f"✍️ {T['paste']}",
+        height=220
+    )
+
+    analyze_btn = st.button(
+        f"🔍 {T['analyze']}"
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with right:
+
+    pipeline_steps = "".join(
+        f'<div class="feature-box">{i}. {step}</div>'
+        for i, step in enumerate(T["pipeline_steps"], start=1)
+    )
+
+    st.markdown(f"""
+    <div class="glass">
+    <h3>⚡ {T['pipeline_title']}</h3>
+    {pipeline_steps}
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    safety_tips = "".join(f"<li>{tip}</li>" for tip in T["tips"])
+
+    st.markdown(f"""
+    <div class="glass">
+    <h3>🔒 {T['tips_title']}</h3>
+    <ul>
+    {safety_tips}
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+# =========================
+# ANALYSIS
+# =========================
+
+if analyze_btn:
+
     text = ""
-    if uploaded is not None:
-        bytes_data = uploaded.read()
-        is_image = False
-        if uploaded.type and uploaded.type.startswith("image"):
-            is_image = True
-        elif uploaded.name.lower().endswith((".png", ".jpg", ".jpeg")):
-            is_image = True
 
-        if is_image:
-            if not is_ocr_available():
-                st.warning("OCR support is not installed. Install easyocr and restart the app, or paste the text manually.")
-            else:
-                with st.spinner("Running OCR..."):
-                    text = extract_text_from_image(bytes_data)
-                if not text:
-                    st.warning("Could not extract text from the uploaded image. Please try a clearer screenshot or paste the content directly.")
+    if uploaded is not None:
+
+        data = uploaded.read()
+
+        if uploaded.type and uploaded.type.startswith("image"):
+
+            with st.spinner(T["ocr_spinner"]):
+                text = extract_text_from_image(data)
+
         else:
+
             try:
-                text = bytes_data.decode("utf-8")
-            except Exception:
+                text = data.decode("utf-8")
+            except:
                 text = ""
 
     if not text:
         text = text_input
 
-    text = clean_text(text or "")
+    text = clean_text(text)
+
     if not text.strip():
-        st.error("Please provide a screenshot or text to analyze.")
-    else:
-        with st.spinner("Analyzing with AI..."):
-            result = analyze_text(text)
 
-        score = result.get("risk_score", "N/A")
-        threat = result.get("threat_level", "N/A")
-        scam_type = result.get("scam_type", "N/A")
-        reasons = result.get("reasons", [])
-        recommendations = result.get("recommendations", [])
+        st.error(T["empty_error"])
+        st.stop()
 
-        status_message = (
-            "Low risk detected." if isinstance(score, int) and score < 40 else
-            "Medium risk detected." if isinstance(score, int) and score < 70 else
-            "High risk detected."
-        )
+    with st.spinner(T["analysis_spinner"]):
+        result = analyze_text(text, selected_lang)
 
-        st.markdown(
-            f"<div class='result-block'><div class='result-heading'>Analysis Result</div>"
-            f"<div class='status-msg'>{status_message}</div></div>",
-            unsafe_allow_html=True,
-        )
+    score = result.get("risk_score", 0)
+    threat = T["threat_levels"].get(result.get("threat_level", "Unknown"), result.get("threat_level", "Unknown"))
+    scam_type = T["scam_types"].get(result.get("scam_type", "Unknown"), result.get("scam_type", "Unknown"))
 
-        metric_col1, metric_col2, metric_col3 = st.columns(3)
-        metric_col1.markdown(
-            f"<div class='metric-card'><div class='metric-title'>Risk Score</div>"
-            f"<div class='metric-value'>{score}</div></div>",
-            unsafe_allow_html=True,
-        )
-        metric_col2.markdown(
-            f"<div class='metric-card'><div class='metric-title'>Threat Level</div>"
-            f"<div class='metric-value'>{threat}</div></div>",
-            unsafe_allow_html=True,
-        )
-        metric_col3.markdown(
-            f"<div class='metric-card'><div class='metric-title'>Scam Type</div>"
-            f"<div class='metric-value'>{scam_type}</div></div>",
-            unsafe_allow_html=True,
-        )
+    st.markdown(f"## 📊 {T['result']}")
 
-        if reasons:
-            reasons_html = "<div class='result-list-card'><h3>Why this looks suspicious</h3><ul>"
-            for r in reasons:
-                reasons_html += f"<li>{r}</li>"
-            reasons_html += "</ul></div>"
-            st.markdown(reasons_html, unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
 
-        if recommendations:
-            recommendations_html = "<div class='result-list-card'><h3>What to do next</h3><ul>"
-            for r in recommendations:
-                recommendations_html += f"<li>{r}</li>"
-            recommendations_html += "</ul></div>"
-            st.markdown(recommendations_html, unsafe_allow_html=True)
+    c1.metric(T["risk"], score)
+    c2.metric(T["threat"], threat)
+    c3.metric(T["type"], scam_type)
+
+    if isinstance(score, int):
+
+        if score >= 70:
+            st.markdown(
+                f'<div class="risk-high">🚨 {T["high_risk"]}</div>',
+                unsafe_allow_html=True
+            )
+
+        elif score >= 40:
+            st.markdown(
+                f'<div class="risk-medium">⚠️ {T["medium_risk"]}</div>',
+                unsafe_allow_html=True
+            )
+
+        else:
+            st.markdown(
+                f'<div class="risk-low">✅ {T["low_risk"]}</div>',
+                unsafe_allow_html=True
+            )
+
+    colA, colB = st.columns(2)
+
+    with colA:
+
+        st.subheader(f"🔎 {T['why']}")
+
+        for item in result.get("reasons", []):
+            st.write("•", item)
+
+    with colB:
+
+        st.subheader(f"🛡 {T['next']}")
+
+        for item in result.get("recommendations", []):
+            st.write("•", item)
+
+    with st.expander(f"📄 {T['extracted']}"):
+        st.write(text)
